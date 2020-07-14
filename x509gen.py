@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import (
     Encoding, PrivateFormat, PublicFormat, NoEncryption,
     load_pem_private_key, load_pem_public_key)
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 import datetime
 
 BACKEND = default_backend()
@@ -38,6 +38,8 @@ SERVER_KEYUSAGE = x509.KeyUsage(
     decipher_only=False,
 )
 
+SERVER_EXTKEYUSAGE = x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH])
+CLIENT_EXTKEYUSAGE = x509.ExtendedKeyUsage([ExtendedKeyUsageOID.CLIENT_AUTH])
 
 def create_rsa_key_pair():
     private_key = rsa.generate_private_key(
@@ -144,6 +146,7 @@ def create_server_cert(pem_private_key, pem_public_key, days):
         x509.BasicConstraints(ca=False, path_length=None), critical=True,
     )
     builder = builder.add_extension(SERVER_KEYUSAGE, critical=True)
+    builder = builder.add_extension(SERVER_EXTKEYUSAGE, critical=True)
 
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
@@ -154,7 +157,6 @@ def create_server_cert(pem_private_key, pem_public_key, days):
     return cert_bytes
 
 # TODO:
-# keyusage, extendedkeyusage
 # client certs
 # issuer & subject key id extensions
 
