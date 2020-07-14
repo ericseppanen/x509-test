@@ -98,6 +98,14 @@ def create_root_cert(pem_private_key, days):
         x509.BasicConstraints(ca=True, path_length=None), critical=True,
     )
     builder = builder.add_extension(CA_KEYUSAGE, critical=True)
+    builder = builder.add_extension(
+        x509.AuthorityKeyIdentifier.from_issuer_public_key(public_key),
+        critical=False
+    )
+    builder = builder.add_extension(
+        x509.SubjectKeyIdentifier.from_public_key(public_key),
+        critical=False
+    )
 
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
@@ -106,16 +114,14 @@ def create_root_cert(pem_private_key, days):
     cert_bytes = certificate.public_bytes(Encoding.PEM)
     return cert_bytes
 
-def create_signing_cert(pem_private_key, pem_public_key, days):
+def create_signing_cert(pem_issuer_cert, pem_private_key, pem_public_key, days):
+    issuer_cert = x509.load_pem_x509_certificate(pem_issuer_cert, BACKEND)
     private_key = load_pem_private_key(pem_private_key, None, BACKEND)
-    # A root certificate is self-signed, so the public and private keys
-    # are from the same key pair
     public_key = load_pem_public_key(pem_public_key, BACKEND)
 
     builder = _cert_helper(public_key,
                            subject_dn=INTERMEDIATE_DN,
-                           # FIXME: read this from the root cert
-                           issuer_dn=ROOT_DN,
+                           issuer_dn=issuer_cert.subject,
                            days=days)
 
     builder = builder.add_extension(
@@ -123,6 +129,15 @@ def create_signing_cert(pem_private_key, pem_public_key, days):
     )
     builder = builder.add_extension(CA_KEYUSAGE, critical=True)
 
+    builder = builder.add_extension(
+        x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_cert.public_key()),
+        critical=False
+    )
+    builder = builder.add_extension(
+        x509.SubjectKeyIdentifier.from_public_key(public_key),
+        critical=False
+    )
+
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
         backend=BACKEND
@@ -131,32 +146,37 @@ def create_signing_cert(pem_private_key, pem_public_key, days):
     return cert_bytes
 
 
-def create_server_cert(pem_private_key, pem_public_key, days):
-
+def create_server_cert(pem_issuer_cert, pem_private_key, pem_public_key, days):
+    issuer_cert = x509.load_pem_x509_certificate(pem_issuer_cert, BACKEND)
     private_key = load_pem_private_key(pem_private_key, None, BACKEND)
-    # A root certificate is self-signed, so the public and private keys
-    # are from the same key pair
     public_key = load_pem_public_key(pem_public_key, BACKEND)
 
     # FIXME: use a CSR to acquire subject & SAN?
 
     builder = _cert_helper(public_key,
                            subject_dn=SERVER_DN,
-                           # FIXME: read this from the intermediate cert
-                           issuer_dn=INTERMEDIATE_DN,
+                           issuer_dn=issuer_cert.subject,
                            days=days)
 
     builder = builder.add_extension(
         x509.SubjectAlternativeName(
             [x509.DNSName(u'mothership_server')]
         ),
-        critical=False
+        critical=True
     )
     builder = builder.add_extension(
         x509.BasicConstraints(ca=False, path_length=None), critical=True,
     )
     builder = builder.add_extension(SERVER_KEYUSAGE, critical=True)
     builder = builder.add_extension(SERVER_EXTKEYUSAGE, critical=True)
+    builder = builder.add_extension(
+        x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_cert.public_key()),
+        critical=False
+    )
+    builder = builder.add_extension(
+        x509.SubjectKeyIdentifier.from_public_key(public_key),
+        critical=False
+    )
 
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
@@ -166,12 +186,7 @@ def create_server_cert(pem_private_key, pem_public_key, days):
     cert_bytes = certificate.public_bytes(Encoding.PEM)
     return cert_bytes
 
-# TODO:
-# client certs
-# issuer & subject key id extensions
-
 def main():
-
     try:
         root_ca_priv_key = open('root_ca_priv_key.pem', 'rb').read()
         root_ca_pub_key = open('root_ca_pub_key.pem', 'rb').read()
@@ -205,7 +220,7 @@ def main():
         print('read signing certificate.')
     except FileNotFoundError:
         print('Creating new signing certificate.')
-        signing_cert = create_signing_cert(root_ca_priv_key, signing_ca_pub_key, 14)
+        signing_cert = create_signing_cert(root_cert, root_ca_priv_key, signing_ca_pub_key, 14)
         open('signing_cert.pem', 'wb').write(signing_cert)
 
     try:
@@ -224,7 +239,7 @@ def main():
         print('read server certificate.')
     except FileNotFoundError:
         print('Creating new server certificate.')
-        server_cert = create_server_cert(signing_ca_priv_key, server_pub_key, 14)
+        server_cert = create_server_cert(signing_cert, signing_ca_priv_key, server_pub_key, 14)
         open('server_cert.pem', 'wb').write(server_cert)
 
 
