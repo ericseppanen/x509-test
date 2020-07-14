@@ -24,6 +24,12 @@ SERVER_DN = x509.Name([
     x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, 'Mothership Server'),
 ])
 
+CLIENT_DN = x509.Name([
+    # By convention, only DNS names are allowed in the common name.
+    # See e.g. cabforum baseline requirements 7.1.4.2.2.a
+    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, 'Random client'),
+])
+
 BACKEND = default_backend()
 
 # cabforum baseline requirements 7.1.2.1.b, 7.1.2.2.e
@@ -40,14 +46,27 @@ CA_KEYUSAGE = x509.KeyUsage(
 )
 
 # cabforum baseline requirements 7.1.2.3.
-SERVER_KEYUSAGE = x509.KeyUsage(
+ENTITY_KEYUSAGE = x509.KeyUsage(
     digital_signature=True,
     content_commitment=False,
     key_encipherment=True,
     data_encipherment=False,
     key_agreement=False,
     key_cert_sign=False,
-    crl_sign=True,
+    crl_sign=False,
+    encipher_only=False,
+    decipher_only=False,
+)
+
+# Self-signed entity needs the union of CA and entity flags.
+SELFSIGNED_ENTITY_KEYUSAGE = x509.KeyUsage(
+    digital_signature=True,
+    content_commitment=False,
+    key_encipherment=True,
+    data_encipherment=False,
+    key_agreement=False,
+    key_cert_sign=True,
+    crl_sign=False,
     encipher_only=False,
     decipher_only=False,
 )
@@ -167,10 +186,53 @@ def create_server_cert(pem_issuer_cert, pem_private_key, pem_public_key, days):
     builder = builder.add_extension(
         x509.BasicConstraints(ca=False, path_length=None), critical=True,
     )
-    builder = builder.add_extension(SERVER_KEYUSAGE, critical=True)
+    builder = builder.add_extension(ENTITY_KEYUSAGE, critical=True)
     builder = builder.add_extension(SERVER_EXTKEYUSAGE, critical=True)
     builder = builder.add_extension(
         x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_cert.public_key()),
+        critical=False
+    )
+    builder = builder.add_extension(
+        x509.SubjectKeyIdentifier.from_public_key(public_key),
+        critical=False
+    )
+
+    certificate = builder.sign(
+        private_key=private_key, algorithm=hashes.SHA256(),
+        backend=BACKEND
+    )
+
+    cert_bytes = certificate.public_bytes(Encoding.PEM)
+    return cert_bytes
+
+def create_selfsigned_client_cert(pem_private_key, days):
+    private_key = load_pem_private_key(pem_private_key, None, BACKEND)
+    public_key = private_key.public_key()
+
+    # FIXME: use a CSR to acquire subject & SAN?
+
+    builder = _cert_helper(public_key,
+                           subject_dn=CLIENT_DN,
+                           issuer_dn=CLIENT_DN,
+                           days=days)
+
+    device_name = x509.Name([
+        x509.NameAttribute(NameOID.SERIAL_NUMBER, 'device_0001'),
+    ])
+
+    builder = builder.add_extension(
+        x509.SubjectAlternativeName(
+            [x509.DirectoryName(device_name)]
+        ),
+        critical=True
+    )
+    builder = builder.add_extension(
+        x509.BasicConstraints(ca=False, path_length=None), critical=True,
+    )
+    builder = builder.add_extension(SELFSIGNED_ENTITY_KEYUSAGE, critical=True)
+    builder = builder.add_extension(CLIENT_EXTKEYUSAGE, critical=True)
+    builder = builder.add_extension(
+        x509.AuthorityKeyIdentifier.from_issuer_public_key(public_key),
         critical=False
     )
     builder = builder.add_extension(
@@ -241,6 +303,25 @@ def main():
         print('Creating new server certificate.')
         server_cert = create_server_cert(signing_cert, signing_ca_priv_key, server_pub_key, 14)
         open('server_cert.pem', 'wb').write(server_cert)
+
+    try:
+        client_priv_key = open('client_priv_key.pem', 'rb').read()
+        client_pub_key = open('client_pub_key.pem', 'rb').read()
+        print('read client keys.')
+    except FileNotFoundError:
+        print('Creating new client keys.')
+        client_priv_key, client_pub_key = create_rsa_key_pair()
+        open('client_priv_key.pem', 'wb').write(client_priv_key)
+        open('client_pub_key.pem', 'wb').write(client_pub_key)
+
+        # FIXME: new keys require a new cert as well.
+    try:
+        client_cert = open('client_cert.pem', 'rb').read()
+        print('read client certificate.')
+    except FileNotFoundError:
+        print('Creating new client certificate.')
+        client_cert = create_selfsigned_client_cert(client_priv_key, 14)
+        open('client_cert.pem', 'wb').write(client_cert)
 
 
 main()
