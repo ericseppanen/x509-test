@@ -10,6 +10,20 @@ from cryptography.hazmat.primitives.serialization import (
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 import datetime
 
+ROOT_DN = x509.Name([
+    x509.NameAttribute(NameOID.COMMON_NAME, 'Mothership Root'),
+])
+
+INTERMEDIATE_DN = x509.Name([
+    x509.NameAttribute(NameOID.COMMON_NAME, 'Mothership CA1'),
+])
+
+SERVER_DN = x509.Name([
+    # By convention, only DNS names are allowed in the common name.
+    # See e.g. cabforum baseline requirements 7.1.4.2.2.a
+    x509.NameAttribute(NameOID.ORGANIZATIONAL_UNIT_NAME, 'Mothership Server'),
+])
+
 BACKEND = default_backend()
 
 # cabforum baseline requirements 7.1.2.1.b, 7.1.2.2.e
@@ -52,14 +66,10 @@ def create_rsa_key_pair():
     pub_bytes = public_key.public_bytes(Encoding.PEM, PublicFormat.PKCS1)
     return priv_bytes, pub_bytes
 
-def _cert_helper(public_key, subject, issuer, days):
+def _cert_helper(public_key, subject_dn, issuer_dn, days):
     builder = x509.CertificateBuilder()
-    builder = builder.subject_name(x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, subject),
-    ]))
-    builder = builder.issuer_name(x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, issuer),
-    ]))
+    builder = builder.subject_name(subject_dn)
+    builder = builder.issuer_name(issuer_dn)
 
     validity_start = datetime.datetime.now()
     validity_end = validity_start + datetime.timedelta(days, 0, 0)
@@ -77,8 +87,8 @@ def create_root_cert(pem_private_key, days):
     public_key = private_key.public_key()
 
     builder = _cert_helper(public_key,
-                           subject=u'mothership_root',
-                           issuer=u'mothership_root',
+                           subject_dn=ROOT_DN,
+                           issuer_dn=ROOT_DN,
                            days=days)
 
     # FIXME: does a root CA cert get a SAN?
@@ -103,9 +113,9 @@ def create_signing_cert(pem_private_key, pem_public_key, days):
     public_key = load_pem_public_key(pem_public_key, BACKEND)
 
     builder = _cert_helper(public_key,
-                           subject=u'mothership_ca1',
+                           subject_dn=INTERMEDIATE_DN,
                            # FIXME: read this from the root cert
-                           issuer=u'mothership_root',
+                           issuer_dn=ROOT_DN,
                            days=days)
 
     builder = builder.add_extension(
@@ -131,9 +141,9 @@ def create_server_cert(pem_private_key, pem_public_key, days):
     # FIXME: use a CSR to acquire subject & SAN?
 
     builder = _cert_helper(public_key,
-                           subject=u'mothership_server',
-                           # FIXME: read this from the root cert
-                           issuer=u'mothership_ca1',
+                           subject_dn=SERVER_DN,
+                           # FIXME: read this from the intermediate cert
+                           issuer_dn=INTERMEDIATE_DN,
                            days=days)
 
     builder = builder.add_extension(
