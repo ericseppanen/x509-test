@@ -12,6 +12,33 @@ import datetime
 
 BACKEND = default_backend()
 
+# cabforum baseline requirements 7.1.2.1.b, 7.1.2.2.e
+CA_KEYUSAGE = x509.KeyUsage(
+    digital_signature=True,
+    content_commitment=False,
+    key_encipherment=False,
+    data_encipherment=False,
+    key_agreement=False,
+    key_cert_sign=True,
+    crl_sign=True,
+    encipher_only=False,
+    decipher_only=False,
+)
+
+# cabforum baseline requirements 7.1.2.3.
+SERVER_KEYUSAGE = x509.KeyUsage(
+    digital_signature=True,
+    content_commitment=False,
+    key_encipherment=True,
+    data_encipherment=False,
+    key_agreement=False,
+    key_cert_sign=False,
+    crl_sign=True,
+    encipher_only=False,
+    decipher_only=False,
+)
+
+
 def create_rsa_key_pair():
     private_key = rsa.generate_private_key(
         public_exponent=65537,
@@ -58,6 +85,8 @@ def create_root_cert(pem_private_key, days):
         # Root certificates do not get a path length.
         x509.BasicConstraints(ca=True, path_length=None), critical=True,
     )
+    builder = builder.add_extension(CA_KEYUSAGE, critical=True)
+
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
         backend=BACKEND
@@ -80,6 +109,8 @@ def create_signing_cert(pem_private_key, pem_public_key, days):
     builder = builder.add_extension(
         x509.BasicConstraints(ca=True, path_length=0), critical=True,
     )
+    builder = builder.add_extension(CA_KEYUSAGE, critical=True)
+
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
         backend=BACKEND
@@ -112,6 +143,8 @@ def create_server_cert(pem_private_key, pem_public_key, days):
     builder = builder.add_extension(
         x509.BasicConstraints(ca=False, path_length=None), critical=True,
     )
+    builder = builder.add_extension(SERVER_KEYUSAGE, critical=True)
+
     certificate = builder.sign(
         private_key=private_key, algorithm=hashes.SHA256(),
         backend=BACKEND
