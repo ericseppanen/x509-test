@@ -264,7 +264,7 @@ def main():
         print('read root certificate.')
     except FileNotFoundError:
         print('Creating new root certificate.')
-        root_cert = create_root_cert(root_ca_priv_key, 14)
+        root_cert = create_root_cert(root_ca_priv_key, 365)
         open('root_cert.pem', 'wb').write(root_cert)
         # FIXME: new root cert will require us to regenerate all downstream certs.
 
