@@ -1,0 +1,15 @@
+[package]
+name = "cert-test-examples"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+hyper = { version = "0.14.26", features = ["server"] }
+hyper-rustls = { git = "https://github.com/rustls/hyper-rustls.git", rev = "286e1fa57ff5cac99994fab355f91c3454d6d83d", features=["acceptor"] }
+openssl = "0.10.53"
+reqwest = { version = "0.11.18", features = ["rustls-tls"] }
+rustls = "0.21.1"
+tokio = { version = "1.28.2", features = ["rt", "macros"] }
+
+x509-test-certs = { path = "../x509-test-certs" }

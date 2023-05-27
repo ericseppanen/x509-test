@@ -1,0 +1,10 @@
+[workspace.package]
+version = "0.1.0"
+authors = ["Eric Seppanen <eds@reric.net>"]
+
+[workspace]
+members = [
+    "x509-test-gen",
+    "x509-test-certs",
+    "cert-test-examples",
+]
