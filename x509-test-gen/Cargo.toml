@@ -1,6 +1,8 @@
 [package]
 name = "x509-test-gen"
-version = "0.1.0"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
 edition = "2021"
 license = "MIT"
 

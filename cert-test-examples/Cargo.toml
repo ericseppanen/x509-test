@@ -1,8 +1,12 @@
 [package]
 name = "cert-test-examples"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
 license = "MIT"
+
+edition = "2021"
+publish = false
 
 [dependencies]
 hyper = { version = "0.14.26", features = ["server"] }

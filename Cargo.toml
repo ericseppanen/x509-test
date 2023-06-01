@@ -1,6 +1,7 @@
 [workspace.package]
 version = "0.1.0"
 authors = ["Eric Seppanen <eds@reric.net>"]
+repository = "https://github.com/ericseppanen/x509-test"
 
 [workspace]
 members = [
