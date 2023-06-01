@@ -1,6 +1,9 @@
 [package]
 name = "x509-test-certs"
-version = "0.1.0"
+description = "Sample ertificates for testing TLS connections"
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
 edition = "2021"
 license = "CC-PDDC"
 
