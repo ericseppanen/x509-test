@@ -5,7 +5,6 @@ version.workspace = true
 authors.workspace = true
 repository.workspace = true
 license = "MIT"
-
 edition = "2021"
 publish = false
 
@@ -18,3 +17,6 @@ rustls = "0.21.1"
 tokio = { version = "1.28.2", features = ["rt", "macros"] }
 
 x509-test-certs = { path = "../x509-test-certs" }
+
+[package.metadata.release]
+release = false
