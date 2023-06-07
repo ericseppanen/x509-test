@@ -133,6 +133,38 @@ pub mod good_certs2 {
         include_bytes!("../static-certs/good_certs2/client_cert.der");
 }
 
+pub mod good_certs3 {
+    //! A client certificate with additional name types.
+    //!
+    //! The certificates can be used to test successful client certificate decoding and authorization.
+    //!
+    //! The keys are RSA (2048 bit) and digests are SHA-256.
+    //!
+    //! The client certificate contains a Subject Alternative Name extension containing
+    //! three names: a common name, a serial number, and a role.
+    //!
+
+    /// The root private key, in PEM format.
+    pub const ROOT_KEY_PEM: &[u8] = include_bytes!("../static-certs/good_certs3/root_key.pem");
+    /// The root private key, in DER format.
+    pub const ROOT_KEY_DER: &[u8] = include_bytes!("../static-certs/good_certs3/root_key.der");
+    /// The root certificate, in PEM format.
+    pub const ROOT_CERT_PEM: &[u8] = include_bytes!("../static-certs/good_certs3/root_cert.pem");
+    /// The root certificate, in DER format.
+    pub const ROOT_CERT_DER: &[u8] = include_bytes!("../static-certs/good_certs3/root_cert.der");
+
+    /// The client private key, in PEM format.
+    pub const CLIENT_KEY_PEM: &[u8] = include_bytes!("../static-certs/good_certs3/client_key.pem");
+    /// The client private key, in DER format.
+    pub const CLIENT_KEY_DER: &[u8] = include_bytes!("../static-certs/good_certs3/client_key.der");
+    /// The client certificate, in PEM format.
+    pub const CLIENT_CERT_PEM: &[u8] =
+        include_bytes!("../static-certs/good_certs3/client_cert.pem");
+    /// The client certificate, in DER format.
+    pub const CLIENT_CERT_DER: &[u8] =
+        include_bytes!("../static-certs/good_certs3/client_cert.der");
+}
+
 pub mod bad_certs1 {
     //! CA and improperly signed server certificates.
     //!

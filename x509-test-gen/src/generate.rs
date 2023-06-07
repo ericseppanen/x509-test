@@ -1,10 +1,10 @@
-use openssl::asn1::{Asn1Integer, Asn1Time};
+use openssl::asn1::{Asn1Integer, Asn1Object, Asn1OctetString, Asn1Time};
 use openssl::bn::BigNum;
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
 use openssl::pkey::{PKey, Private};
 use openssl::rsa::Rsa;
-use openssl::x509::{extension, X509Builder, X509Name, X509NameBuilder, X509};
+use openssl::x509::{extension, X509Builder, X509Extension, X509Name, X509NameBuilder, X509};
 
 /// A cryptographic key used for signing certificates
 ///
@@ -265,6 +265,19 @@ impl CertBuilder {
             .build(&context)
             .unwrap();
         self.builder.append_extension(subject_alt_name).unwrap();
+        self
+    }
+
+    /// Add a Subject Alternative Name field containing a serial number.
+    ///
+    /// This might be useful in a client certificate.
+    pub fn subject_alternative_name_raw(mut self, raw: &[u8]) -> Self {
+        let der_bytes = Asn1OctetString::new_from_bytes(raw).unwrap();
+
+        let oid = Asn1Object::from_str("2.5.29.17").unwrap();
+
+        let ext = X509Extension::new_from_der(&oid, true, &der_bytes).unwrap();
+        self.builder.append_extension(ext).unwrap();
         self
     }
 
