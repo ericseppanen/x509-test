@@ -7,10 +7,6 @@ repository.workspace = true
 edition = "2021"
 license = "MIT"
 
-[[example]]
-name = "regenerate-crate-certs"
-path = "examples/regenerate_crate_certs.rs"
-
 [dependencies]
 asn1 = "0.15.2"
 openssl = "0.10.52"
